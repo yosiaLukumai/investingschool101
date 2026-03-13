@@ -46,7 +46,7 @@ MQTT_USERNAME = 'wayne123'
 MQTT_PASSWORD = 'dispenser123'
 
 TOPICS = [
-    "/topic/#/",
+    "/topic/#",
     "/topic/transittag/heartbeat/#",
     "/topic/transittag/wifi/#",
     "/topic/transittag/rfid/#",

@@ -39,7 +39,7 @@ const client = mqtt.connect('mqtt://byte-iot.net', {
 });
 
 const topics = [
-  "/topic/#/",
+  "/topic/#",
   "/topic/transittag/heartbeat/#",
   "/topic/transittag/wifi/#",
   "/topic/transittag/rfid/#",
