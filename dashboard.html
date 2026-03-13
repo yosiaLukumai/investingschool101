@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransitTag Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -424,10 +425,86 @@
     </div>
 
     <script>
-        // WebSocket connection
-        const ws = new WebSocket(`ws://${window.location.host}`);
+        // Connection handling (supports both WebSocket and Socket.IO)
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
+        let connectionType = 'socketio'; // Try Socket.IO first (Python), fallback to WebSocket (Node.js)
+        let ws = null;
+        let socket = null;
+
+        // Try to detect server type and connect
+        function initConnection() {
+            if (typeof io !== 'undefined') {
+                // Socket.IO is available, use it (Python server)
+                connectionType = 'socketio';
+                connectSocketIO();
+            } else {
+                // Fallback to WebSocket (Node.js server)
+                connectionType = 'websocket';
+                connectWebSocket();
+            }
+        }
+
+        function connectSocketIO() {
+            socket = io();
+
+            socket.on('connect', () => {
+                console.log('Socket.IO connected');
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'Connected (Python)';
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Socket.IO disconnected');
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = 'Disconnected';
+            });
+
+            socket.on('mqtt_message', (message) => {
+                handleMessage(message);
+            });
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.host}`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                statusDot.className = 'status-dot connected';
+                statusText.textContent = 'Connected (Node.js)';
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                statusDot.className = 'status-dot disconnected';
+                statusText.textContent = 'Disconnected';
+            };
+
+            ws.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+        }
+
+        function handleMessage(message) {
+            if (message.type === 'init') {
+                // Initialize with existing data
+                if (message.data.latestStatus) {
+                    updateStatus(message.data.latestStatus);
+                }
+                if (message.data.heartbeats) {
+                    message.data.heartbeats.forEach(hb => updateCharts(hb));
+                }
+                if (message.data.wifiData) {
+                    updateWiFi(message.data.wifiData);
+                }
+            } else if (message.type === 'heartbeat') {
+                updateStatus(message.data);
+                updateCharts(message.data);
+            } else if (message.type === 'wifi') {
+                updateWiFi(message.data);
+            }
+        }
 
         // Chart configurations
         const chartConfig = {
@@ -490,39 +567,8 @@
             }
         });
 
-        ws.onopen = () => {
-            console.log('WebSocket connected');
-            statusDot.className = 'status-dot connected';
-            statusText.textContent = 'Connected';
-        };
-
-        ws.onclose = () => {
-            console.log('WebSocket disconnected');
-            statusDot.className = 'status-dot disconnected';
-            statusText.textContent = 'Disconnected';
-        };
-
-        ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-
-            if (message.type === 'init') {
-                // Initialize with existing data
-                if (message.data.latestStatus) {
-                    updateStatus(message.data.latestStatus);
-                }
-                if (message.data.heartbeats) {
-                    message.data.heartbeats.forEach(hb => updateCharts(hb));
-                }
-                if (message.data.wifiData) {
-                    updateWiFi(message.data.wifiData);
-                }
-            } else if (message.type === 'heartbeat') {
-                updateStatus(message.data);
-                updateCharts(message.data);
-            } else if (message.type === 'wifi') {
-                updateWiFi(message.data);
-            }
-        };
+        // Initialize connection on page load
+        initConnection();
 
         function updateStatus(data) {
             document.getElementById('deviceImei').textContent = data.imei || '-';

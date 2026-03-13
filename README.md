@@ -2,6 +2,8 @@
 
 A real-time web dashboard for monitoring TransitTag IoT devices via MQTT.
 
+Available in both **Node.js** and **Python** implementations using the same dashboard interface.
+
 ## Features
 
 - **Real-time Data Visualization** - Live updates via WebSocket connection
@@ -12,25 +14,56 @@ A real-time web dashboard for monitoring TransitTag IoT devices via MQTT.
 - **Modern UI** - Responsive design with gradient backgrounds and smooth animations
 
 ## Installation
+### Option 1: Node.js Server
 
 1. Install dependencies:
 ```bash
 npm install
 ```
 
+### Option 2: Python Server
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
 ## Running the Dashboard
+
+### Option 1: Node.js Server
 
 1. Start the dashboard server:
 ```bash
 npm run dashboard
 ```
 
-2. Open your browser and navigate to:
-```
-http://localhost:3000/dashboard.html
+### Option 2: Python Server
+
+1. Start the dashboard server:
+```bash
+python server.py
 ```
 
-The dashboard will automatically connect to the MQTT broker and start displaying real-time data.
+Or with Python 3:
+```bash
+python3 server.py
+```
+
+### Accessing the Dashboard
+
+2. Open your browser and navigate to:
+```
+http://localhost:3000/
+```
+
+The dashboard will automatically:
+- Detect which server type is running (Node.js or Python)
+- Connect to the MQTT broker
+- Start displaying real-time data
+
+The status indicator will show which server type is connected:
+- "Connected (Node.js)" - Running the Node.js server
+- "Connected (Python)" - Running the Python server
 
 ## Dashboard Components
 
@@ -85,11 +118,38 @@ Works with all modern browsers that support:
 - ES6 JavaScript
 - CSS Grid and Flexbox
 
+## Server Implementations
+
+### Node.js Server (`server.js`)
+- Uses Express for HTTP server
+- Uses `ws` library for WebSocket connections
+- Uses `mqtt` package for MQTT broker connection
+- Lightweight and fast
+
+### Python Server (`server.py`)
+- Uses Flask for HTTP server
+- Uses Flask-SocketIO for WebSocket connections
+- Uses paho-mqtt for MQTT broker connection
+- Easy to extend with Python libraries
+
+Both servers:
+- Share the same `dashboard.html` file
+- Provide identical functionality
+- Connect to the same MQTT broker
+- Store the same data structure
+
 ## Port Configuration
 
 Default port: `3000`
 
+### Node.js
 To change the port, set the `PORT` environment variable:
 ```bash
 PORT=8080 npm run dashboard
+```
+
+### Python
+To change the port, modify the `PORT` variable in `server.py`:
+```python
+PORT = 8080  # Change this line
 ```
