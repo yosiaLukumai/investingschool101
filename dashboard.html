@@ -446,6 +446,7 @@
         }
 
         function connectSocketIO() {
+            console.log('Connecting via Socket.IO...');
             socket = io();
 
             socket.on('connect', () => {
@@ -461,6 +462,7 @@
             });
 
             socket.on('mqtt_message', (message) => {
+                console.log('Socket.IO received mqtt_message:', message);
                 handleMessage(message);
             });
         }
@@ -487,21 +489,26 @@
         }
 
         function handleMessage(message) {
+            console.log('Received message:', message);
             if (message.type === 'init') {
                 // Initialize with existing data
+                console.log('Initializing with data:', message.data);
                 if (message.data.latestStatus) {
                     updateStatus(message.data.latestStatus);
                 }
                 if (message.data.heartbeats) {
+                    console.log('Loading heartbeats:', message.data.heartbeats.length);
                     message.data.heartbeats.forEach(hb => updateCharts(hb));
                 }
                 if (message.data.wifiData) {
                     updateWiFi(message.data.wifiData);
                 }
             } else if (message.type === 'heartbeat') {
+                console.log('Heartbeat received:', message.data);
                 updateStatus(message.data);
                 updateCharts(message.data);
             } else if (message.type === 'wifi') {
+                console.log('WiFi data received:', message.data);
                 updateWiFi(message.data);
             }
         }
@@ -574,7 +581,7 @@
             document.getElementById('deviceImei').textContent = data.imei || '-';
             document.getElementById('batteryLevel').textContent = data.battery ? `${data.battery}V` : '--';
             document.getElementById('gsmSignal').textContent = data.gsm || '--';
-            document.getElementById('satellites').textContent = data.satellites || 0;
+            document.getElementById('satellites').textContent = data.satelites || data.satellites || 0;
             document.getElementById('speed').textContent = `${data.speed || 0} km/h`;
             document.getElementById('latitude').textContent = data.latitude || '0.000000';
             document.getElementById('longitude').textContent = data.longitude || '0.000000';

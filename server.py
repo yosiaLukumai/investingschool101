@@ -33,9 +33,11 @@ data_store = {
         'gsm': 0,
         'acc': 'UNKNOWN',
         'time': None,
-        'satellites': 0,
+        'satelites': 0,
         'speed': 0,
-        'imei': None
+        'imei': None,
+        'latitude': 0,
+        'longitude': 0
     }
 }
 
@@ -68,6 +70,7 @@ def on_message(client, userdata, msg):
     try:
         topic = msg.topic
         payload = json.loads(msg.payload.decode('utf-8'))
+        logger.info(f'Received MQTT message on topic: {topic}')
 
         # Handle heartbeat messages
         if '/heartbeat/' in topic:
@@ -83,12 +86,15 @@ def on_message(client, userdata, msg):
                 'gsm': payload.get('gsm', 0),
                 'acc': payload.get('acc', 'UNKNOWN'),
                 'time': payload.get('time'),
-                'satellites': payload.get('satelites', 0),
+                'satelites': payload.get('satelites', 0),
                 'speed': payload.get('speed', 0),
-                'imei': payload.get('imei')
+                'imei': payload.get('imei'),
+                'latitude': payload.get('latitude', 0),
+                'longitude': payload.get('longitude', 0)
             }
 
             # Broadcast to WebSocket clients
+            logger.info(f'Broadcasting heartbeat to WebSocket clients')
             socketio.emit('mqtt_message', {
                 'type': 'heartbeat',
                 'data': payload
@@ -170,7 +176,7 @@ def handle_connect():
     logger.info('WebSocket client connected')
 
     # Send initial data to new client
-    emit('mqtt_message', {
+    initial_data = {
         'type': 'init',
         'data': {
             'heartbeats': list(data_store['heartbeats']),
@@ -178,7 +184,9 @@ def handle_connect():
             'latestStatus': data_store['latest_status'],
             'rfidData': list(data_store['rfid_data'])
         }
-    })
+    }
+    logger.info(f'Sending initial data: {len(data_store["heartbeats"])} heartbeats')
+    emit('mqtt_message', initial_data)
 
 @socketio.on('disconnect')
 def handle_disconnect():
