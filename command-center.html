@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Command Center</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #e2e8f0;
+            letter-spacing: -0.02em;
+        }
+
+        .header-subtitle {
+            font-size: 0.8em;
+            color: #94a3b8;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 12px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.85em;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover { background: rgba(255,255,255,0.14); color: #e2e8f0; }
+        .nav-link.active { background: rgba(102,126,234,0.3); border-color: #667eea; color: #a5b4fc; }
+
+        .conn-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.connected { background: #4ade80; }
+        .status-dot.disconnected { background: #ef4444; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main layout */
+        .main {
+            display: grid;
+            grid-template-columns: 280px 1fr 360px;
+            grid-template-rows: auto 1fr;
+            gap: 0;
+            height: calc(100vh - 65px);
+        }
+
+        /* Panels */
+        .panel {
+            padding: 20px;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            overflow-y: auto;
+        }
+
+        .panel:last-child { border-right: none; }
+
+        .panel-title {
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title .count-badge {
+            background: rgba(102,126,234,0.3);
+            color: #a5b4fc;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        /* Devices panel */
+        .device-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .device-card:hover {
+            background: rgba(255,255,255,0.09);
+            border-color: rgba(102,126,234,0.4);
+        }
+
+        .device-card.selected {
+            background: rgba(102,126,234,0.15);
+            border-color: #667eea;
+        }
+
+        .device-imei {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: #e2e8f0;
+            font-family: monospace;
+        }
+
+        .device-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .device-type-tag {
+            font-size: 0.7em;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .device-type-tag.tracker {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+        }
+
+        .device-type-tag.transittag {
+            background: rgba(52, 211, 153, 0.2);
+            color: #34d399;
+        }
+
+        .device-lastseen {
+            font-size: 0.7em;
+            color: #64748b;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #475569;
+            font-size: 0.85em;
+            padding: 24px 0;
+        }
+
+        /* Command panel */
+        .command-panel {
+            padding: 20px 24px;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        /* Device selector */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #64748b;
+        }
+
+        .device-type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .type-btn {
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            color: #94a3b8;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .type-btn:hover { background: rgba(255,255,255,0.09); }
+
+        .type-btn.active.tracker {
+            background: rgba(251,146,60,0.15);
+            border-color: #fb923c;
+            color: #fb923c;
+        }
+
+        .type-btn.active.transittag {
+            background: rgba(52,211,153,0.15);
+            border-color: #34d399;
+            color: #34d399;
+        }
+
+        input[type="text"], textarea, select {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #e2e8f0;
+            padding: 10px 12px;
+            font-size: 0.9em;
+            width: 100%;
+            transition: border-color 0.15s;
+            font-family: monospace;
+        }
+
+        input[type="text"]:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input::placeholder, textarea::placeholder { color: #475569; }
+
+        select option { background: #1e293b; }
+
+        /* Quick commands */
+        .quick-commands {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .quick-cmd-btn {
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #cbd5e1;
+            font-size: 0.85em;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quick-cmd-btn:hover {
+            background: rgba(102,126,234,0.15);
+            border-color: #667eea;
+            color: #a5b4fc;
+        }
+
+        .quick-cmd-btn .cmd-label { font-weight: 600; }
+        .quick-cmd-btn .cmd-value {
+            font-family: monospace;
+            font-size: 0.85em;
+            color: #64748b;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Send button */
+        .send-btn {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            width: 100%;
+        }
+
+        .send-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .send-btn:active { transform: translateY(0); }
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        /* Divider */
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+        }
+
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.success { border-color: #4ade80; color: #4ade80; }
+        #toast.error { border-color: #ef4444; color: #ef4444; }
+
+        /* Response panel */
+        .response-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .response-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 12px 14px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .response-card.new {
+            border-color: rgba(74,222,128,0.4);
+            background: rgba(74,222,128,0.05);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .response-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .response-imei {
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #94a3b8;
+        }
+
+        .response-time {
+            font-size: 0.72em;
+            color: #475569;
+        }
+
+        .response-body {
+            font-family: monospace;
+            font-size: 0.78em;
+            white-space: pre-wrap;
+            color: #a5b4fc;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 10px;
+            border-radius: 6px;
+            max-height: 160px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        /* Command history table */
+        .history-section {
+            grid-column: 1 / -1;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 20px 24px;
+            overflow-y: auto;
+            max-height: 280px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82em;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: #475569;
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .history-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            vertical-align: top;
+        }
+
+        .history-table tr:last-child td { border-bottom: none; }
+        .history-table tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-pill.pending {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+        }
+
+        .status-pill.responded {
+            background: rgba(74,222,128,0.15);
+            color: #4ade80;
+        }
+
+        .cmd-mono {
+            font-family: monospace;
+            font-size: 0.95em;
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #c4b5fd;
+        }
+
+        .topic-mono {
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #64748b;
+        }
+
+        .response-preview {
+            font-family: monospace;
+            font-size: 0.8em;
+            color: #94a3b8;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main { grid-template-columns: 1fr; }
+            .panel, .command-panel { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <div>
+            <div class="header h1" style="font-size:1.3em;font-weight:700;">⚡ Command Center</div>
+            <div class="header-subtitle">Send & track MQTT commands</div>
+        </div>
+    </div>
+    <div class="header-nav">
+        <a href="/dashboard.html" class="nav-link">📊 Dashboard</a>
+        <a href="/command-center.html" class="nav-link active">⚡ Commands</a>
+    </div>
+    <div class="conn-badge">
+        <span class="status-dot disconnected" id="statusDot"></span>
+        <span id="statusText">Connecting...</span>
+    </div>
+</div>
+
+<div class="main">
+    <!-- Left: Online Devices -->
+    <div class="panel">
+        <div class="panel-title">
+            Online Devices
+            <span class="count-badge" id="deviceCount">0</span>
+        </div>
+        <div id="devicesList">
+            <div class="empty-state">Waiting for device logins...</div>
+        </div>
+    </div>
+
+    <!-- Center: Send Command -->
+    <div class="command-panel">
+        <div class="form-group">
+            <div class="form-label">Device Type</div>
+            <div class="device-type-selector">
+                <button class="type-btn active tracker" id="btnTracker" onclick="selectType('tracker')">
+                    🚗 Tracker
+                </button>
+                <button class="type-btn transittag" id="btnTransittag" onclick="selectType('transittag')">
+                    🏷️ TransitTag
+                </button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-label">IMEI</div>
+            <input type="text" id="imeiInput" placeholder="e.g. 863471065047747" maxlength="20" />
+        </div>
+
+        <hr class="divider">
+
+        <div class="form-group">
+            <div class="form-label">Quick Commands</div>
+            <div class="quick-commands" id="quickCommands">
+                <!-- Populated by JS based on device type -->
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div class="form-label">Custom Command</div>
+            <input type="text" id="customCommand" placeholder="Type command..." />
+        </div>
+
+        <button class="send-btn" id="sendBtn" onclick="sendCommand()">
+            Send Command
+        </button>
+
+        <hr class="divider">
+
+        <div style="font-size:0.75em; color:#475569; line-height:1.6;">
+            <div style="margin-bottom:4px; color:#64748b; font-weight:600; font-size:0.85em;">PUBLISH TOPIC</div>
+            <div id="topicPreview" style="font-family:monospace; color:#94a3b8; background:rgba(255,255,255,0.04); padding:8px 10px; border-radius:6px; word-break:break-all;">
+                /topic/tracker/{IMEI}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: Command Responses -->
+    <div class="panel">
+        <div class="panel-title">
+            Live Responses
+            <span class="count-badge" id="responseCount">0</span>
+        </div>
+        <div class="response-feed" id="responseFeed">
+            <div class="empty-state">Responses will appear here...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Command History (bottom strip) -->
+<div class="history-section">
+    <div class="panel-title" style="margin-bottom:12px;">
+        Command History
+        <span class="count-badge" id="historyCount">0</span>
+    </div>
+    <table class="history-table">
+        <thead>
+            <tr>
+                <th>Time Sent</th>
+                <th>Type</th>
+                <th>IMEI</th>
+                <th>Command</th>
+                <th>Topic</th>
+                <th>Status</th>
+                <th>Response Preview</th>
+            </tr>
+        </thead>
+        <tbody id="historyTableBody">
+            <tr>
+                <td colspan="7" style="text-align:center; color:#475569; padding:20px;">No commands sent yet</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<div id="toast"></div>
+
+<script>
+    // State
+    let selectedType = 'tracker';
+    let devices = {};
+    let commandHistory = [];
+    let responses = [];
+    let ws = null;
+
+    const quickCmds = {
+        tracker: [
+            { label: 'Health Check', value: 'checking', desc: 'Get device status' },
+            { label: 'Lock', value: 'lock', desc: 'Lock the device' },
+            { label: 'Unlock', value: 'unlock', desc: 'Unlock the device' },
+        ],
+        transittag: [
+            { label: 'Health Check', value: 'health', desc: 'Get device status' },
+            { label: 'Restart', value: 'restart', desc: 'Restart device' },
+        ]
+    };
+
+    // WebSocket
+    function connect() {
+        ws = new WebSocket(`ws://${window.location.host}`);
+
+        ws.onopen = () => {
+            document.getElementById('statusDot').className = 'status-dot connected';
+            document.getElementById('statusText').textContent = 'Connected';
+        };
+
+        ws.onclose = () => {
+            document.getElementById('statusDot').className = 'status-dot disconnected';
+            document.getElementById('statusText').textContent = 'Disconnected';
+            setTimeout(connect, 3000);
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            handleWsMessage(msg);
+        };
+    }
+
+    function handleWsMessage(msg) {
+        if (msg.type === 'init') {
+            // Load initial state
+            const d = msg.data;
+            if (d.connectedDevices) d.connectedDevices.forEach(dev => { devices[dev.imei] = dev; });
+            if (d.commandHistory) commandHistory = d.commandHistory;
+            if (d.cmdResponses) responses = d.cmdResponses;
+            renderDevices();
+            renderHistory();
+            renderResponses();
+        } else if (msg.type === 'device_login') {
+            devices[msg.data.imei] = msg.data;
+            renderDevices();
+            showToast(`Device online: ${msg.data.imei} (${msg.data.deviceType})`, 'success');
+        } else if (msg.type === 'command_sent') {
+            commandHistory.unshift(msg.data);
+            if (commandHistory.length > 100) commandHistory.pop();
+            renderHistory();
+        } else if (msg.type === 'cmd_response') {
+            responses.unshift(msg.data);
+            if (responses.length > 50) responses.pop();
+            renderResponses(true);
+        } else if (msg.type === 'command_response_matched') {
+            // Update history row status
+            const entry = commandHistory.find(c => c.id === msg.data.id);
+            if (entry) {
+                entry.response = msg.data.response;
+                entry.respondedAt = msg.data.respondedAt;
+                renderHistory();
+            }
+        }
+    }
+
+    // Type selector
+    function selectType(type) {
+        selectedType = type;
+        document.getElementById('btnTracker').className = 'type-btn' + (type === 'tracker' ? ' active tracker' : ' tracker');
+        document.getElementById('btnTransittag').className = 'type-btn' + (type === 'transittag' ? ' active transittag' : ' transittag');
+        renderQuickCommands();
+        updateTopicPreview();
+    }
+
+    function renderQuickCommands() {
+        const cmds = quickCmds[selectedType] || [];
+        const el = document.getElementById('quickCommands');
+        el.innerHTML = cmds.map(c => `
+            <button class="quick-cmd-btn" onclick="fillCommand('${c.value}')">
+                <span class="cmd-label">${c.label}</span>
+                <span class="cmd-value">${c.value}</span>
+            </button>
+        `).join('');
+    }
+
+    function fillCommand(cmd) {
+        document.getElementById('customCommand').value = cmd;
+    }
+
+    function updateTopicPreview() {
+        const imei = document.getElementById('imeiInput').value.trim() || '{IMEI}';
+        document.getElementById('topicPreview').textContent = `/topic/${selectedType}/${imei}`;
+    }
+
+    document.getElementById('imeiInput').addEventListener('input', updateTopicPreview);
+
+    // Device list click to autofill IMEI
+    function selectDevice(imei, type) {
+        document.getElementById('imeiInput').value = imei;
+        selectType(type);
+        updateTopicPreview();
+        // Highlight selected card
+        document.querySelectorAll('.device-card').forEach(el => el.classList.remove('selected'));
+        const card = document.querySelector(`[data-imei="${imei}"]`);
+        if (card) card.classList.add('selected');
+    }
+
+    // Send command
+    async function sendCommand() {
+        const imei = document.getElementById('imeiInput').value.trim();
+        const command = document.getElementById('customCommand').value.trim();
+        if (!imei) { showToast('Enter an IMEI first', 'error'); return; }
+        if (!command) { showToast('Enter a command', 'error'); return; }
+
+        const btn = document.getElementById('sendBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+
+        try {
+            const res = await fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ deviceType: selectedType, imei, command })
+            });
+            const result = await res.json();
+            if (result.success) {
+                showToast(`Command sent: "${command}"`, 'success');
+                document.getElementById('customCommand').value = '';
+            } else {
+                showToast(`Error: ${result.error}`, 'error');
+            }
+        } catch (err) {
+            showToast('Network error', 'error');
+        }
+
+        btn.disabled = false;
+        btn.textContent = 'Send Command';
+    }
+
+    // Allow Enter key in custom command input
+    document.getElementById('customCommand').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendCommand();
+    });
+
+    // Render functions
+    function renderDevices() {
+        const list = Object.values(devices);
+        document.getElementById('deviceCount').textContent = list.length;
+        const el = document.getElementById('devicesList');
+        if (list.length === 0) {
+            el.innerHTML = '<div class="empty-state">Waiting for device logins...</div>';
+            return;
+        }
+        // Sort by lastSeen desc
+        list.sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+        el.innerHTML = list.map(dev => `
+            <div class="device-card" data-imei="${dev.imei}" onclick="selectDevice('${dev.imei}', '${dev.type}')">
+                <div class="device-imei">${dev.imei}</div>
+                <div class="device-meta">
+                    <span class="device-type-tag ${dev.type}">${dev.type}</span>
+                    <span class="device-lastseen">${timeSince(dev.lastSeen)}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderResponses(isNew = false) {
+        document.getElementById('responseCount').textContent = responses.length;
+        const el = document.getElementById('responseFeed');
+        if (responses.length === 0) {
+            el.innerHTML = '<div class="empty-state">Responses will appear here...</div>';
+            return;
+        }
+        el.innerHTML = responses.slice(0, 15).map((r, i) => `
+            <div class="response-card ${isNew && i === 0 ? 'new' : ''}">
+                <div class="response-meta">
+                    <span class="response-imei">${r.imei} <span style="color:#64748b">(${r.deviceType})</span></span>
+                    <span class="response-time">${fmtTime(r.timestamp)}</span>
+                </div>
+                <div class="response-body">${escHtml(r.response)}</div>
+            </div>
+        `).join('');
+    }
+
+    function renderHistory() {
+        document.getElementById('historyCount').textContent = commandHistory.length;
+        const tbody = document.getElementById('historyTableBody');
+        if (commandHistory.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#475569; padding:20px;">No commands sent yet</td></tr>';
+            return;
+        }
+        tbody.innerHTML = commandHistory.slice(0, 50).map(c => `
+            <tr>
+                <td>${fmtTime(c.sentAt)}</td>
+                <td><span class="device-type-tag ${c.deviceType}">${c.deviceType}</span></td>
+                <td style="font-family:monospace; font-size:0.85em; color:#94a3b8;">${c.imei}</td>
+                <td><span class="cmd-mono">${escHtml(c.command)}</span></td>
+                <td><span class="topic-mono">${escHtml(c.topic)}</span></td>
+                <td>
+                    ${c.response
+                        ? `<span class="status-pill responded">✓ Responded</span>`
+                        : `<span class="status-pill pending">⏳ Pending</span>`
+                    }
+                </td>
+                <td>
+                    ${c.response
+                        ? `<span class="response-preview">${escHtml(c.response.split('\n')[0])}</span>`
+                        : '<span style="color:#475569">—</span>'
+                    }
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Helpers
+    function fmtTime(iso) {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function timeSince(iso) {
+        if (!iso) return '';
+        const sec = Math.floor((Date.now() - new Date(iso)) / 1000);
+        if (sec < 60) return `${sec}s ago`;
+        if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+        return `${Math.floor(sec/3600)}h ago`;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function showToast(msg, type = '') {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = `show ${type}`;
+        setTimeout(() => { t.className = ''; }, 3000);
+    }
+
+    // Refresh device "last seen" labels every 30s
+    setInterval(() => { if (Object.keys(devices).length > 0) renderDevices(); }, 30000);
+
+    // Init
+    renderQuickCommands();
+    connect();
+</script>
+</body>
+</html>
